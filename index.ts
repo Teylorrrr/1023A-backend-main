@@ -7,7 +7,6 @@ const app = fastify();
 app.register(cors);
 
 (async () => {
-  // Configurações da conexão (preencha com seus dados)
   const conn = await mysql.createConnection({
     host: "localhost",
     user: 'root',
@@ -16,7 +15,6 @@ app.register(cors);
     port: 3306
   });
 
-  // Rota que retorna todos os atletas (array)
   app.get('/atletas', async (request, reply) => {
     try {
       const [rows] = await conn.query(`
@@ -25,17 +23,19 @@ app.register(cors);
           nome,
           nomeCamisa,
           numeroCamisa,
-          posicao
+          posicao,
+          altura,
+          peso,
+          YEAR(CURDATE()) - YEAR(dataNascimento) AS idade
         FROM atletas
       `);
-      reply.send(rows); // envia array
+      reply.send(rows);
     } catch (err) {
       console.error(err);
       reply.status(500).send({ mensagem: "Erro no servidor" });
     }
   });
 
-  // Rota que retorna um atleta pelo registro (objeto único)
   app.get('/atletas/:registroAtleta', async (request, reply) => {
     const { registroAtleta } = request.params as { registroAtleta: string };
     try {
@@ -57,7 +57,7 @@ app.register(cors);
       `, [registroAtleta]);
 
       if (Array.isArray(rows) && rows.length > 0) {
-        reply.send(rows[0]); // objeto único
+        reply.send(rows[0]);
       } else {
         reply.status(404).send({ mensagem: "Atleta não encontrado" });
       }
