@@ -15,7 +15,10 @@ const pool = mysql.createPool({
   user: "root",
   password: "",
   database: "JBB",
-  port: 3306
+  port: 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
 (async () => {
@@ -396,6 +399,7 @@ const pool = mysql.createPool({
           estatisticas.bolasTresTentadas,
         ]
       );
+
       reply.status(201).send({ mensagem: "Estatísticas cadastradas com sucesso" });
     } catch (err) {
       console.error(err);
@@ -403,55 +407,6 @@ const pool = mysql.createPool({
     }
   });
 
-      // Deletar atleta
-app.delete("/atletas/:registroAtleta", async (request, reply) => {
-  const { registroAtleta } = request.params as { registroAtleta: string };
-
-  try {
-    // Verifica se existe
-    const [check] = await pool.query(`SELECT * FROM atletas WHERE registro = ?`, [registroAtleta]);
-    if ((check as any[]).length === 0) {
-      return reply.status(404).send({ mensagem: "Atleta não encontrado" });
-    }
-
-    // Deleta possíveis estatísticas e vínculos antes
-    await pool.query(`DELETE FROM atletasEstatisticasJogos WHERE atletas_registro = ?`, [registroAtleta]);
-    await pool.query(`DELETE FROM atletasDoTime WHERE atletas_registro = ?`, [registroAtleta]);
-
-    // Agora deleta o atleta
-    await pool.query(`DELETE FROM atletas WHERE registro = ?`, [registroAtleta]);
-    reply.send({ mensagem: "Atleta deletado com sucesso" });
-  } catch (err) {
-    console.error("Erro ao deletar atleta:", err);
-    reply.status(500).send({ mensagem: "Erro interno ao deletar atleta" });
-  }
-});
-
-// Deletar time
-app.delete("/times/:id", async (request, reply) => {
-  const { id } = request.params as { id: string };
-
-  try {
-    const [check] = await pool.query(`SELECT * FROM times WHERE id = ?`, [id]);
-    if ((check as any[]).length === 0) {
-      return reply.status(404).send({ mensagem: "Time não encontrado" });
-    }
-
-    // Remove relacionamentos e dependências primeiro
-    await pool.query(`DELETE FROM atletasDoTime WHERE times_id = ?`, [id]);
-    await pool.query(`DELETE FROM equipesEstatisticasJogos WHERE times_id = ?`, [id]);
-    await pool.query(`DELETE FROM resultadoJogo WHERE times_id = ?`, [id]);
-    await pool.query(`DELETE FROM jogos WHERE timeCasa = ? OR timeFora = ?`, [id, id]);
-    await pool.query(`DELETE FROM timesDoCampeonato WHERE times_id = ?`, [id]);
-
-    // Agora deleta o time
-    await pool.query(`DELETE FROM times WHERE id = ?`, [id]);
-    reply.send({ mensagem: "Time deletado com sucesso" });
-  } catch (err) {
-    console.error("Erro ao deletar time:", err);
-    reply.status(500).send({ mensagem: "Erro interno ao deletar time" });
-  }
-});
   // Iniciar servidor na porta 8000
   app.listen({ port: 8000 }, (err, address) => {
     if (err) {
